@@ -2,7 +2,7 @@ from typing import TypedDict
 
 from agents.analista.schemas import Contradicao
 from agents.coletor.schemas import IndicadoresFII
-from agents.scorer.schemas import ScoreResult
+from agents.scorer.schemas import MarcoTimeline, ScoreResult
 
 
 class InvestigacaoState(TypedDict, total=False):
@@ -15,6 +15,7 @@ class InvestigacaoState(TypedDict, total=False):
     documentos_indexados: int
     contradicoes: list[Contradicao]
     score: ScoreResult | None
+    timeline: list[MarcoTimeline]
     status: str
     persistido: bool
     erros: list[str]

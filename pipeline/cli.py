@@ -6,6 +6,7 @@ from pathlib import Path
 from agents.analista.contradicoes import detectar_contradicoes
 from agents.coletor.status_invest import buscar_indicadores
 from agents.scorer.score import calcular_score
+from agents.scorer.timeline import gerar_timeline
 from db.analises import salvar_analise
 from graph.build import executar_grafo
 from llm.gemini import gerar_estruturado
@@ -61,6 +62,7 @@ def investigar(ticker: str) -> None:
         {"ticker": ticker.upper(), "pdf_bytes": pdf_bytes, "serie_vacancia": SERIE_VACANCIA_EXEMPLO},
         coletor=buscar_indicadores,
         analista=partial(detectar_contradicoes, llm_call=gerar_estruturado),
+        timeline=partial(gerar_timeline, llm_call=gerar_estruturado),
         persistir=salvar_analise,
     )
     saida = {
@@ -71,6 +73,7 @@ def investigar(ticker: str) -> None:
         "indicadores": resultado["indicadores"].model_dump() if resultado.get("indicadores") else None,
         "contradicoes": [c.model_dump() for c in resultado.get("contradicoes", [])],
         "score": resultado["score"].model_dump() if resultado.get("score") else None,
+        "timeline": [m.model_dump() for m in resultado.get("timeline", [])],
         "documentos_indexados": resultado.get("documentos_indexados"),
         "erros": resultado.get("erros", []),
     }

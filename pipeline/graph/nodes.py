@@ -4,10 +4,12 @@ from typing import Callable
 from agents.analista.schemas import Contradicao
 from agents.coletor.schemas import IndicadoresFII
 from agents.scorer.score import calcular_score
+from agents.scorer.schemas import MarcoTimeline
 from graph.state import InvestigacaoState
 
 ColetorCall = Callable[[str], IndicadoresFII]
 AnalistaCall = Callable[[str, str, list[dict]], list[Contradicao]]
+TimelineCall = Callable[[str, list[dict], list[Contradicao], float], list[MarcoTimeline]]
 ExtratorCall = Callable[[bytes], list]
 ChunkerCall = Callable[[str, int, int], list[str]]
 EmbedderCall = Callable[[str], list[float]]
@@ -97,6 +99,24 @@ def no_scorer(state: InvestigacaoState) -> dict:
     return {"score": score}
 
 
+def construir_no_timeline(timeline: TimelineCall):
+    def no(state: InvestigacaoState) -> dict:
+        try:
+            marcos = timeline(
+                state["ticker"],
+                state.get("serie_vacancia", []),
+                state.get("contradicoes", []),
+                state["score"].score_final,
+            )
+            return {"timeline": marcos}
+        except Exception as erro:
+            erros = list(state.get("erros", []))
+            erros.append(f"timeline: {erro}")
+            return {"timeline": [], "erros": erros}
+
+    return no
+
+
 def construir_no_falha(persistir: PersistirCall):
     def no(state: InvestigacaoState) -> dict:
         erros = list(state.get("erros", []))
@@ -120,11 +140,17 @@ def construir_no_sucesso(persistir: PersistirCall):
         score = state.get("score")
         persistido = True
         try:
+            # montagem do resultado fica dentro do try: um item malformado em
+            # `timeline` não pode crashar o grafo, só falhar a persistência
+            # (mesma regra de "falha nunca se disfarça de sucesso" da Fase 5).
+            resultado = score.model_dump() if score else None
+            if resultado is not None:
+                resultado["timeline"] = [marco.model_dump() for marco in state.get("timeline", [])]
             persistir(
                 ticker=state["ticker"],
                 status="concluida",
                 score=score.score_final if score else None,
-                resultado=score.model_dump() if score else None,
+                resultado=resultado,
             )
         except Exception as erro:
             persistido = False
