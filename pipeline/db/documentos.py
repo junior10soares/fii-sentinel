@@ -1,9 +1,6 @@
-import os
-
 from pydantic import BaseModel
-from supabase import Client, create_client
 
-_cliente: Client | None = None
+from db._cliente import obter_cliente
 
 
 class DocumentoSimilar(BaseModel):
@@ -14,13 +11,6 @@ class DocumentoSimilar(BaseModel):
     similaridade: float
 
 
-def _obter_cliente() -> Client:
-    global _cliente
-    if _cliente is None:
-        _cliente = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_ROLE_KEY"])
-    return _cliente
-
-
 def inserir_documento(
     ticker: str,
     fonte: str,
@@ -29,9 +19,9 @@ def inserir_documento(
     metadata: dict | None = None,
 ) -> None:
     # ponytail: insert puro, sem dedup — a tabela não tem chave natural ainda.
-    # Vira upsert de verdade quando um caller real (Fase 5+) deixar claro qual
-    # é a chave de unicidade (provavelmente ticker+fonte+índice do chunk).
-    _obter_cliente().table("documentos").insert(
+    # Vira upsert de verdade quando o caller (o grafo, desde a Fase 5) deixar
+    # claro qual é a chave de unicidade (provavelmente ticker+fonte+índice do chunk).
+    obter_cliente().table("documentos").insert(
         {
             "ticker": ticker,
             "fonte": fonte,
@@ -43,7 +33,7 @@ def inserir_documento(
 
 
 def buscar_similares(ticker: str, query_embedding: list[float], k: int = 5) -> list[DocumentoSimilar]:
-    resposta = _obter_cliente().rpc(
+    resposta = obter_cliente().rpc(
         "buscar_documentos_similares",
         {"p_ticker": ticker, "query_embedding": query_embedding, "match_count": k},
     ).execute()

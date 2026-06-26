@@ -11,3 +11,4 @@ pymupdf
 torch
 sentence-transformers
 supabase
+langgraph

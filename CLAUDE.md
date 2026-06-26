@@ -84,6 +84,21 @@ Supabase (pipeline escreve, app lê). Não criar um pacote `shared/` de tipos
 cross-linguagem — isso é especulativo; Python e TypeScript nunca vão
 compartilhar um tipo importável de verdade.
 
+### Isso precisava ser um grafo? (pergunta da Fase 5)
+
+Sim, mas pelo motivo certo. Com 6 nós e 1 branch de decisão, uma função Python
+simples com `if`/`for` teria resolvido o fluxo de hoje com menos código —
+LangGraph não foi necessário para *este* tamanho. O motivo de manter é
+prospectivo: a Fase 6 (timeline narrativa) e fases seguintes vão adicionar nós
+e branches sem reescrever a orquestração existente, e o `graph/` já separa
+nós finos (chamam função já testada) de lógica de roteamento (retry com
+backoff, distinção entre erro transitório e definitivo) de forma que vai
+escalar. Decisão de design real registrada aqui: cada nó devolve um dict
+parcial do estado (sem mutar in-place) e os 2 nós terminais (`falha`/`sucesso`)
+sempre tentam persistir no Supabase mas nunca deixam uma falha de persistência
+se disfarçar de sucesso — `status` (resultado da investigação) e `persistido`
+(se isso chegou no Supabase) são campos separados de propósito.
+
 ## Comandos
 
 ### pipeline/ (Python)
