@@ -1,0 +1,14 @@
+# env
+.env
+.env.local
+.env.*.local
+
+# pipeline (Python)
+pipeline/.venv/
+pipeline/__pycache__/
+pipeline/**/__pycache__/
+pipeline/.pytest_cache/
+*.pyc
+
+# app (Next.js) — node_modules e build ficam fora; o resto do .gitignore do create-next-app
+# já existe dentro de app/.gitignore
