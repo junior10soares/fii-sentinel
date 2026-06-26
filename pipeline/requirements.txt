@@ -1,4 +1,13 @@
+# torch CPU-only: o runner do GitHub Actions não tem GPU, e a wheel padrão do
+# PyPI baixa ~2GB de libs CUDA desnecessárias.
+--index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://pypi.org/simple
+
 pydantic
 google-genai
 httpx
 beautifulsoup4
+pymupdf
+torch
+sentence-transformers
+supabase
