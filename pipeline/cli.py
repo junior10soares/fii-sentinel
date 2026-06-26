@@ -2,6 +2,7 @@ import sys
 
 from agents.analista.contradicoes import detectar_contradicoes
 from agents.coletor.status_invest import buscar_indicadores
+from agents.scorer.score import calcular_score
 from llm.gemini import gerar_estruturado
 
 NARRATIVA_EXEMPLO = (
@@ -35,7 +36,17 @@ def indicadores(ticker: str) -> None:
     print(buscar_indicadores(ticker).model_dump_json(indent=2))
 
 
-COMANDOS = {"demo": demo, "indicadores": indicadores}
+def score(ticker: str) -> None:
+    # ponytail: sem contradições reais (precisaria de narrativa + LLM de um
+    # relatório de verdade) nem série histórica de DY (a Fase 2 só coleta o
+    # instantâneo atual) — "transparência" e "tendência" ficam sempre no valor
+    # neutro/máximo aqui; o score reflete só os indicadores do coletor.
+    indicadores_reais = buscar_indicadores(ticker)
+    resultado = calcular_score(indicadores_reais, contradicoes=[])
+    print(resultado.model_dump_json(indent=2))
+
+
+COMANDOS = {"demo": demo, "indicadores": indicadores, "score": score}
 
 
 def main() -> None:
