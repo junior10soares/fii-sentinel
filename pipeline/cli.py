@@ -4,7 +4,7 @@ from functools import partial
 from pathlib import Path
 
 from agents.analista.contradicoes import detectar_contradicoes
-from agents.coletor.status_invest import buscar_indicadores
+from agents.coletor.fundamentus import buscar_indicadores
 from agents.scorer.score import calcular_score
 from agents.scorer.timeline import gerar_timeline
 from db.analises import salvar_analise
