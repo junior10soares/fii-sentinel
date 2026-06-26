@@ -1,0 +1,76 @@
+name: cron-investigar
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      ticker:
+        description: "Ticker do FII a investigar (ex: KNRI11). Disparo manual exige um ticker; o cron diário ignora isso e roda a lista fixa."
+        required: true
+
+# Lista fixa pequena (não "todos os FIIs do mercado", por decisão do plano) —
+# só usada pelo disparo agendado, nunca pelo workflow_dispatch manual.
+env:
+  TICKERS_CRON_DIARIO: '["KNRI11","HGLG11","MXRF11","XPLG11","VISC11"]'
+
+jobs:
+  listar-tickers:
+    runs-on: ubuntu-latest
+    outputs:
+      tickers: ${{ steps.definir.outputs.tickers }}
+    steps:
+      - name: Validar e definir lista de tickers
+        id: definir
+        env:
+          # nunca interpolar ${{ inputs.ticker }} direto num `run:` (script
+          # injection via expansão de template do GitHub Actions) — sempre via
+          # env: e validado com regex de bash antes de qualquer outro uso.
+          TICKER_INPUT: ${{ github.event_name == 'workflow_dispatch' && inputs.ticker || '' }}
+        run: |
+          if [ -z "$TICKER_INPUT" ]; then
+            echo "tickers=${TICKERS_CRON_DIARIO}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! [[ "$TICKER_INPUT" =~ ^[A-Z]{4}11$ ]]; then
+            echo "Ticker inválido: '$TICKER_INPUT' (esperado 4 letras + 11, ex: KNRI11)" >&2
+            exit 1
+          fi
+          echo "tickers=[\"$TICKER_INPUT\"]" >> "$GITHUB_OUTPUT"
+
+  investigar:
+    needs: listar-tickers
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ticker: ${{ fromJson(needs.listar-tickers.outputs.tickers) }}
+    defaults:
+      run:
+        working-directory: pipeline
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: pipeline/requirements.txt
+
+      - name: Cache do modelo de embeddings (Hugging Face)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-embeddings-${{ hashFiles('pipeline/requirements.txt') }}
+
+      - run: pip install -r requirements.txt
+
+      - name: Investigar
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # matrix.ticker já passou pela validação acima (ou é um dos
+          # literais fixos de TICKERS_CRON_DIARIO) — seguro pra usar aqui.
+          TICKER: ${{ matrix.ticker }}
+        run: python cli.py investigar "$TICKER"
