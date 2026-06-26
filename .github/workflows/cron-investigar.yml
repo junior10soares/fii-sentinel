@@ -65,15 +65,6 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - name: DEBUG TEMPORÁRIO - status do robots.txt a partir do runner
-        run: |
-          curl -s -o /dev/null -w "robots.txt status: %{http_code}\n" \
-            -A "fii-sentinel/0.1 (+https://github.com/junior10soares/fii-sentinel)" \
-            https://statusinvest.com.br/robots.txt
-          curl -s -o /dev/null -w "pagina ticker status: %{http_code}\n" \
-            -A "fii-sentinel/0.1 (+https://github.com/junior10soares/fii-sentinel)" \
-            https://statusinvest.com.br/fundos-imobiliarios/knri11
-
       - name: Investigar
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
