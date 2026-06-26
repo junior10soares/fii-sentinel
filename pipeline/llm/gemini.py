@@ -1,7 +1,9 @@
 from google import genai
 from pydantic import BaseModel
 
-MODELO_PADRAO = "gemini-2.0-flash"
+# alias mantido pela Google apontando pro flash recomendado atual — evita
+# cota free zerada quando uma versão fixa (ex: gemini-2.0-flash) é descontinuada
+MODELO_PADRAO = "gemini-flash-latest"
 
 
 def gerar_estruturado(prompt: str, schema: type[BaseModel]) -> list[BaseModel]:
