@@ -1,6 +1,7 @@
 import sys
 
 from agents.analista.contradicoes import detectar_contradicoes
+from agents.coletor.status_invest import buscar_indicadores
 from llm.gemini import gerar_estruturado
 
 NARRATIVA_EXEMPLO = (
@@ -30,14 +31,18 @@ def demo() -> None:
         print(f"[{c.severidade.upper()}] {c.dado_contraditorio}\n  -> {c.explicacao}\n")
 
 
-COMANDOS = {"demo": demo}
+def indicadores(ticker: str) -> None:
+    print(buscar_indicadores(ticker).model_dump_json(indent=2))
+
+
+COMANDOS = {"demo": demo, "indicadores": indicadores}
 
 
 def main() -> None:
     if len(sys.argv) < 2 or sys.argv[1] not in COMANDOS:
-        print(f"Uso: python cli.py [{'|'.join(COMANDOS)}]")
+        print(f"Uso: python cli.py [{'|'.join(COMANDOS)}] [args]")
         sys.exit(1)
-    COMANDOS[sys.argv[1]]()
+    COMANDOS[sys.argv[1]](*sys.argv[2:])
 
 
 if __name__ == "__main__":

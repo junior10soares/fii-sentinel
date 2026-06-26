@@ -1,2 +1,4 @@
 pydantic
 google-genai
+httpx
+beautifulsoup4
