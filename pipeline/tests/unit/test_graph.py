@@ -97,6 +97,7 @@ def test_grafo_completa_com_sucesso_e_calcula_score():
     assert persistidos[0]["status"] == "concluida"
     assert persistidos[0]["score"] == resultado["score"].score_final
     assert persistidos[0]["resultado"]["timeline"] == [marco.model_dump()]
+    assert persistidos[0]["resultado"]["contradicoes"] == [contradicao.model_dump()]
 
 
 def test_grafo_indexa_documentos_quando_ha_pdf():

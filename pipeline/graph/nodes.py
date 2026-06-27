@@ -146,6 +146,7 @@ def construir_no_sucesso(persistir: PersistirCall):
             resultado = score.model_dump() if score else None
             if resultado is not None:
                 resultado["timeline"] = [marco.model_dump() for marco in state.get("timeline", [])]
+                resultado["contradicoes"] = [c.model_dump() for c in state.get("contradicoes", [])]
             persistir(
                 ticker=state["ticker"],
                 status="concluida",
