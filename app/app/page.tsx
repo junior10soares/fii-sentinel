@@ -1,64 +1,69 @@
-import Image from "next/image";
+import { AnaliseCard } from "@/components/fii/analise-card";
+import { SearchBar } from "@/components/fii/search-bar";
+import { getSupabaseAnon } from "@/lib/supabase/client";
+import type { AnaliseRow } from "@/lib/types";
 
-export default function Home() {
+// sem sinal de dinamismo (sem cookies/headers/params), o Next prerenderiza
+// esta página como estática no build — "análises recentes" ficaria congelada
+// na data do deploy. Novas investigações chegam via cron/GitHub Actions, não
+// via redeploy, então essa página precisa renderizar de novo a cada request.
+export const dynamic = "force-dynamic";
+
+async function buscarAnalisesRecentes(): Promise<AnaliseRow[]> {
+  const supabase = getSupabaseAnon();
+  const { data, error } = await supabase
+    .from("analises")
+    .select("id, ticker, status, score, resultado, created_at")
+    .eq("status", "concluida")
+    .order("created_at", { ascending: false })
+    .limit(30);
+
+  if (error) {
+    console.error("Erro ao buscar análises recentes:", error.message);
+    return [];
+  }
+
+  // mais de uma investigação por ticker é normal (reprocessamento) — a home
+  // mostra só a mais recente de cada, o histórico completo fica pra depois.
+  const vistos = new Set<string>();
+  const unicas: AnaliseRow[] = [];
+  for (const analise of data ?? []) {
+    if (vistos.has(analise.ticker)) continue;
+    vistos.add(analise.ticker);
+    unicas.push(analise);
+  }
+  return unicas.slice(0, 12);
+}
+
+export default async function Home() {
+  const analises = await buscarAnalisesRecentes();
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="flex flex-1 flex-col">
+      <header className="border-b border-border px-6 py-5 sm:px-10">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="font-serif text-2xl font-medium">FII Sentinel</h1>
+          <SearchBar />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+      </header>
+
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10 sm:px-10">
+        <p className="mb-8 max-w-2xl text-muted-foreground">
+          Cruzamos o discurso do relatório gerencial de um FII com os números reais e
+          apontamos contradições — não só exibimos métricas.
+        </p>
+
+        {analises.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
+            Nenhuma análise ainda. Busque um ticker para começar.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {analises.map((analise) => (
+              <AnaliseCard key={analise.id} analise={analise} />
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );
